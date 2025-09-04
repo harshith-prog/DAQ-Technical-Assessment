@@ -8,7 +8,7 @@ This file is used to document your thoughts, approaches and research conducted a
 So what i figured is often invalid strings go into the client..
 
 1. To prevent invalid data from being sent:
-    parse the data in json. Make sure only valid numbers are being sent and not invalid strings. Invalid valjues are skipped entirely and printed in console just as a safety mesh.
+    parse the data in json. Make sure only valid numbers are being sent and not invalid strings. Invalid values are skipped entirely and printed in console just as a safety mesh.
 2. To get safe operating temperature:
     Create out of range threshold and set as 3. Append the timestamps to array and if this array length is greater than 3, print in console.
 3. Connect/Disconnect button:
