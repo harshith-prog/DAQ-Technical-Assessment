@@ -1,6 +1,10 @@
 import net from "net";
 import { WebSocket, WebSocketServer } from "ws";
 
+const OUT_OF_RANGE_LOG_WINDOW = 5000; 
+const OUT_OF_RANGE_THRESHOLD = 3;
+let outOfRangeTimestamps: number[] = [];
+
 interface VehicleData {
   battery_temperature: number | string;
   timestamp: number;
@@ -18,13 +22,44 @@ tcpServer.on("connection", (socket) => {
     const message: string = msg.toString();
 
     console.log(`Received: ${message}`);
-    
-    // Send JSON over WS to frontend clients
-    websocketServer.clients.forEach(function each(client) {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
+
+    let parsed: VehicleData;
+    try {
+      parsed = JSON.parse(message);
+    } catch (e) {
+      console.warn("Received invalid JSON, skipping:", message);
+      return;
+    }
+
+    const temp = parsed.battery_temperature;
+    const isValid =
+      typeof temp === "number" &&
+      !isNaN(temp) &&
+      temp !== null &&
+      temp !== undefined;
+
+    if (isValid) {
+      const now = Date.now();
+      if (temp < 20 || temp > 80) {
+        outOfRangeTimestamps.push(now);
+        outOfRangeTimestamps = outOfRangeTimestamps.filter(
+          (ts) => now - ts <= OUT_OF_RANGE_LOG_WINDOW
+        );
+        if (outOfRangeTimestamps.length > OUT_OF_RANGE_THRESHOLD) {
+          console.error(
+            `[${new Date(now).toISOString()}] WARNING: Battery temperature out of range more than ${OUT_OF_RANGE_THRESHOLD} times in last 5s!`
+          );
+        }
       }
-    });
+
+      websocketServer.clients.forEach(function each(client) {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(parsed));
+        }
+      });
+    } else {
+      console.warn("Invalid battery_temperature value, skipping:", temp);
+    }
   });
 
   socket.on("end", () => {

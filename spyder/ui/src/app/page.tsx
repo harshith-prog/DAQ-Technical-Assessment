@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import useWebSocket, { ReadyState } from "react-use-websocket"
+import React, { useEffect } from "react"
 import { useTheme } from "next-themes"
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,71 +9,13 @@ import { Thermometer } from "lucide-react"
 import Numeric from "../components/custom/numeric"
 import RedbackLogoDarkMode from "../../public/logo-darkmode.svg"
 import RedbackLogoLightMode from "../../public/logo-lightmode.svg"
+import { DataProvider, useDataContext } from "../components/custom/data-wrapper"
 
-const WS_URL = "ws://localhost:8080"
-
-interface VehicleData {
-  battery_temperature: number
-  timestamp: number
-}
-
-/**
- * Page component that displays DAQ technical assessment. Contains the LiveValue component as well as page header and labels.
- * Could this be split into more components?...
- *
- * @returns {JSX.Element} The rendered page component.
- */
-export default function Page(): JSX.Element {
+function PageInner() {
   const { setTheme } = useTheme()
-  const [temperature, setTemperature] = useState<any>(0)
-  const [connectionStatus, setConnectionStatus] = useState<string>("Disconnected")
-  const { lastJsonMessage, readyState }: { lastJsonMessage: VehicleData | null; readyState: ReadyState } = useWebSocket(
-    WS_URL,
-    {
-      share: false,
-      shouldReconnect: () => true,
-    },
-  )
+  const { temperature, connectionStatus } = useDataContext()
 
-  /**
-   * Effect hook to handle WebSocket connection state changes.
-   */
-  useEffect(() => {
-    switch (readyState) {
-      case ReadyState.OPEN:
-        console.log("Connected to streaming service")
-        setConnectionStatus("Connected")
-        break
-      case ReadyState.CLOSED:
-        console.log("Disconnected from streaming service")
-        setConnectionStatus("Disconnected")
-        break
-      case ReadyState.CONNECTING:
-        setConnectionStatus("Connecting")
-        break
-      default:
-        setConnectionStatus("Disconnected")
-        break
-    }
-  }, [])
-
-  /**
-   * Effect hook to handle incoming WebSocket messages.
-   */
-  useEffect(() => {
-    console.log("Received: ", lastJsonMessage)
-    if (lastJsonMessage === null) {
-      return
-    }
-    setTemperature(lastJsonMessage.battery_temperature)
-  }, [lastJsonMessage])
-
-  /**
-   * Effect hook to set the theme to dark mode.
-   */
-  useEffect(() => {
-    setTheme("dark")
-  }, [setTheme])
+  useEffect(() => { setTheme("dark") }, [setTheme])
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -103,5 +44,13 @@ export default function Page(): JSX.Element {
         </Card>
       </main>
     </div>
+  )
+}
+
+export default function Page() {
+  return (
+    <DataProvider>
+      <PageInner />
+    </DataProvider>
   )
 }
